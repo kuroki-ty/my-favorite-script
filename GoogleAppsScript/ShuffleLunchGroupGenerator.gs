@@ -131,6 +131,7 @@ var Person = function(array) {
   this.hasAccount    = array[10] == '◯' ? true : false;                   // アカウントがあるかどうか
   this.isNeuron      = array[12] == 'ニューロン' ? true : false;              // ニューロンかどうか
   this.preLunchGroup = array[PRE_LUNCH_COL] ? array[PRE_LUNCH_COL] : 0;    // 前回ランチグループID(前回未参加なら0)
+  if (this.hasAccount) { CalendarApp.subscribeToCalendar(this.address); }  // マイカレンダーに他人のカレンダーを登録する
   this.calendar      = CalendarApp.getCalendarById(this.address);          // Googleカレンダーオブジェクト
   this.lunchTimeEvents = [];         // ランチタイム時の予定一覧(key:日 value:Eventオブジェクト)
 };
