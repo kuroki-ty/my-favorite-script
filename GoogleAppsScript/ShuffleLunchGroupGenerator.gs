@@ -178,9 +178,9 @@ Person.prototype.setLunchTimeEvents = function(days) {
   var formatReg = function(str) { return "[" + str + "]"; }
 
   var configDB = _spreadSheet.getSheetByName(CONFIG_SHEET);
-  var okPeople = getValuesInSheet(configDB, 10, 2, 1, configDB.getDataRange().getLastColumn() - 1)[0].filter(Boolean);
-  var okWords = getValuesInSheet(configDB, 8, 2, 1, configDB.getDataRange().getLastColumn() - 1)[0].filter(Boolean);
-  var ngWords = getValuesInSheet(configDB, 9, 2, 1, configDB.getDataRange().getLastColumn() - 1)[0].filter(Boolean);
+  var okPeople = getValuesInSheet(configDB, 11, 2, 1, configDB.getDataRange().getLastColumn() - 1)[0].filter(Boolean);
+  var okWords = getValuesInSheet(configDB, 9, 2, 1, configDB.getDataRange().getLastColumn() - 1)[0].filter(Boolean);
+  var ngWords = getValuesInSheet(configDB, 10, 2, 1, configDB.getDataRange().getLastColumn() - 1)[0].filter(Boolean);
   var okPRegex = new RegExp(okPeople.join('|'));
   var okWRegex = new RegExp(okWords.join('|'));
   var ngWRegex = new RegExp(ngWords.join('|'));
@@ -298,8 +298,14 @@ function getValuesInSheet(sheet, row, col, numRows, numCols) {
  * グループ分け実行関数
  */
 function execGrouping() {
-  initForGrouping();
+  initSpreadSheet();
 
+  var isExec = getValueInSheet(CONFIG_SHEET, 1, 2);
+  if (!isExec) {
+    return;
+  }
+
+  initForGrouping();
   createPersonalData();
   groupDirectorMembers();
 
@@ -318,6 +324,7 @@ function execGrouping() {
   });
 
   setLunchGroupInfo();
+  setValueInSheet(CONFIG_SHEET, 1, 2, 'FALSE');
 }
 
 /**
@@ -331,15 +338,14 @@ function initSpreadSheet() {
  * グローバル変数初期化、ランチグループを作成する
  */
 function initForGrouping() {
-  initSpreadSheet();
+  GROUP_NUM = getValueInSheet(CONFIG_SHEET, 4, 2);
+  PRE_LUNCH_COL = getValueInSheet(CONFIG_SHEET, 5, 2);
 
-  GROUP_NUM = getValueInSheet(CONFIG_SHEET, 3, 2);
-  PRE_LUNCH_COL = getValueInSheet(CONFIG_SHEET, 4, 2);
-
-  LUNCH_TIME = new LunchTime(getValueInSheet(CONFIG_SHEET, 5, 2),
-                             getValueInSheet(CONFIG_SHEET, 6, 2),
-                             getValueInSheet(CONFIG_SHEET, 7, 2));
+  LUNCH_TIME = new LunchTime(getValueInSheet(CONFIG_SHEET, 6, 2),
+                             getValueInSheet(CONFIG_SHEET, 7, 2),
+                             getValueInSheet(CONFIG_SHEET, 8, 2));
   IS_FORCE_REGISTRATION = getValueInSheet(CONFIG_SHEET, 12, 2);
+  FORCE_LUNCH_DATE_RANGE = getValueInSheet(CONFIG_SHEET, 13, 2);
 
   var createTeamList = function() {
     var ret = [];
@@ -477,7 +483,7 @@ function groupDirectorMembers() {
      * - グループで一番多いチームメンバーではない(3人以上同じチームがいないこと)
      * - グループの人数がオーバーしていない         **/
     if ((groupId != _lunchGroup[groupId].members.leader.preLunchGroup || isConditionRelaxation) &&
-        !_lunchGroup[groupId].isMostTeam(mem.team)                   &&
+        !_lunchGroup[groupId].isMostTeam(mem.team) &&
         _lunchGroup[groupId].members.people.length < MAX_MEMBER) {
        _lunchGroup[groupId].members.people.push(mem);
        _lunchGroup[groupId].updateTeamList(mem.team);
@@ -498,6 +504,8 @@ function groupDirectorMembers() {
 
 /**
  * グループ内のメンバーのカレンダーから指定時間が空いているかを検索する
+ * @param group 予定を決めるグループ
+ * @return ランチ実行日 予定が全く空いていない場合は unixTime=0を返す
  */
 function searchLunchExecDate(group) {
   var canLunchDays = getLunchAvailableDays();
@@ -537,6 +545,7 @@ function searchLunchExecDate(group) {
  *    - 予定強制登録フラグがtrueの場合に実行される
  *    - ニューロンだけは被らないように調整する
  * @param group 予定を決めるグループ
+ * @return ランチ実行日 予定が全く空いていない場合は unixTime=0を返す
  */
 function getForceRandomLunchExecDate(group) {
   var ret = new Date(0);
@@ -611,6 +620,7 @@ function isSchedulesDuplicated(member, date) {
  * @detail
  *   ランチ可能日: 休日、祝日を除いた日、つまり平日
  * @param range 月末からのrange営業日だけ取得したい場合に指定 default:0
+ * @return ランチ可能日の配列を返す
  */
 function getLunchAvailableDays(range) {
     range = range || 0;
