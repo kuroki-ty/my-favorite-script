@@ -12,6 +12,8 @@ var CONFIRM_SHEET        = '予定確認'      // 予定確認用シート
 var LUNCH_TIME;                          // ランチ設定月とランチタイム範囲(マスターから取得)
 var PRE_LUNCH_COL;                       // 前回ランチに行ったグループの列番号
 var GROUP_NUM;                           // ランチグループ数(マスターから取得)
+var IS_FORCE_REGISTRATION;               // ランチの予定を強制的に入れるかどうか(マスターから取得)
+var FORCE_LUNCH_DATE_RANGE;              // 強制予定登録する営業日日数(月末から何営業日か？ マスターから取得)
 var MIN_REQUIRED_NUM       = 2;          // グループに最低でも必要な要素数 leader+neuron=2
 var OVERLAPPING_NUM        = 2;          // グループ内のチーム重複可能人数(途中で緩和する可能性あり)
 var GROUP_CONFIRM_ROW      = 2;          // グループ最終確認のために出力するシートの行番号
@@ -163,13 +165,13 @@ Person.prototype.isShinsotsu = function() {
  *    - 上記で問題ないとされても予定ありと判断するパターンが存在する
  *      - ngWordsのいずれかがイベント名に入っている場合
  *    - okWords,ngWords,okPeopleはマスタースプレッドシートから取得する
+ *    - IS_FORCE_REGISTRATION: 強制予定登録フラグ
  * @param days ランチ実行可能日一覧
  */
 Person.prototype.setLunchTimeEvents = function(days) {
   var self = this;
 
-  var isForceRegistration = getValueInSheet(CONFIG_SHEET, 11, 2);
-  if (isForceRegistration) {
+  if (IS_FORCE_REGISTRATION) {
     return;
   }
 
@@ -260,13 +262,13 @@ function rand(n) {
 }
 
 /**
- * membersの中からランダムで1つを選出する
- * @param members 母集団
+ * arrayの中からランダムで1つを選出する
+ * @param array 母集団
  * @return 母集団からランダムに選出されたオブジェクトを返す
  */
-function getRandomMember(members) {
-  var n = rand(members.length);
-  return members[n];
+function getRandomElement(array) {
+  var n = rand(array.length);
+  return array[n];
 }
 
 /**
@@ -303,7 +305,12 @@ function execGrouping() {
 
   // ランチ実行日を決定
   _lunchGroup.forEach(function(group) {
-    var exec = searchLunchExecDate(group);
+    var exec;
+    if (IS_FORCE_REGISTRATION) {
+      exec = getForceRandomLunchExecDate(group);
+    } else {
+      exec = searchLunchExecDate(group);
+    }
     if (Math.round(exec.getTime() / 1000) != 0) {
       group.execDate['start'] = new Date(_yyyymmdd_hhmmss(exec, LUNCH_TIME.start));
       group.execDate['end']   = new Date(_yyyymmdd_hhmmss(exec, LUNCH_TIME.end));
@@ -332,6 +339,7 @@ function initForGrouping() {
   LUNCH_TIME = new LunchTime(getValueInSheet(CONFIG_SHEET, 5, 2),
                              getValueInSheet(CONFIG_SHEET, 6, 2),
                              getValueInSheet(CONFIG_SHEET, 7, 2));
+  IS_FORCE_REGISTRATION = getValueInSheet(CONFIG_SHEET, 12, 2);
 
   var createTeamList = function() {
     var ret = [];
@@ -378,7 +386,7 @@ function groupDirectorMembers() {
   });
   var cntL = 0;
   while (cntL < GROUP_NUM) {
-    var leader = getRandomMember(leaders);
+    var leader = getRandomElement(leaders);
     var groupId = getRandomGroupId();
     if (!_lunchGroup[groupId].members.leader) {
       _lunchGroup[groupId].members.leader = leader;
@@ -403,7 +411,7 @@ function groupDirectorMembers() {
     if (neurons.length == 0) {
       neurons = neuronsCopy.slice(0, neuronsCopy.length);
     }
-    var neuron = getRandomMember(neurons);
+    var neuron = getRandomElement(neurons);
     var groupId = getRandomGroupId();
     if (!_lunchGroup[groupId].members.neuron) {
       _lunchGroup[groupId].members.neuron = neuron;
@@ -430,7 +438,7 @@ function groupDirectorMembers() {
   });
   var MAX_SHINSOTSU_MEMBER = Math.floor(shinsotsus.length / GROUP_NUM);
   while (shinsotsus.length != 0) {
-    var shinsotsu = getRandomMember(shinsotsus);
+    var shinsotsu = getRandomElement(shinsotsus);
     var groupId = getRandomGroupId();
     /** 新卒メンバー選出条件
      * - 前回のリーダーと同じグループではない(但し、この条件で詰まるようなら緩和する)
@@ -462,7 +470,7 @@ function groupDirectorMembers() {
   OVERLAPPING_NUM = 2;
   var MAX_MEMBER = Math.floor(_directors.length / GROUP_NUM);
   while (_directors.length != 0) {
-    var mem = getRandomMember(_directors);
+    var mem = getRandomElement(_directors);
     var groupId = getRandomGroupId();
     /** メンバー選出条件
      * - 前回のリーダーと同じグループではない(但し、この条件で詰まるようなら緩和する)
@@ -524,6 +532,61 @@ function searchLunchExecDate(group) {
 }
 
 /**
+ * グループのランチ予定を月末５営業日でランダムに振り分ける
+ * @detail
+ *    - 予定強制登録フラグがtrueの場合に実行される
+ *    - ニューロンだけは被らないように調整する
+ * @param group 予定を決めるグループ
+ */
+function getForceRandomLunchExecDate(group) {
+  var ret = new Date(0);
+
+  var canLunchDays = getLunchAvailableDays(FORCE_LUNCH_DATE_RANGE);
+  var maxGroupInDate = Math.floor(GROUP_NUM / canLunchDays.length);
+  maxGroupInDate = maxGroupInDate || 1;
+
+  // (グループ数 / 営業日日数) > ニューロン数 だった場合は無限ループなので検知してunixTime:0を返す
+  var getUniqueNeuronNum = function() {
+    var uniqueNeuron = [];
+    _lunchGroup.forEach(function(group) {
+      uniqueNeuron.push(group.members.neuron.id);
+    });
+    return uniqueNeuron.filter(function (x, i, self) { return self.indexOf(x) !== i; }).length;
+  }
+  if (Math.ceil(GROUP_NUM / canLunchDays.length) > getUniqueNeuronNum()) {
+    return ret;
+  }
+
+  var dateCounter = function(date) {
+    var c = 0;
+    _lunchGroup.forEach(function(g) {
+      if (typeof g.execDate['start'] !== "undefined" &&
+          g.execDate['start'].getDate() == date.getDate()) {
+        c++;
+      }
+    });
+    return c;
+  };
+  var isNG = true;
+  var error = 0;
+  while(isNG) {
+    var randomLunchDay = getRandomElement(canLunchDays);
+    if (dateCounter(randomLunchDay) < maxGroupInDate &&
+        !isSchedulesDuplicated(group.members.neuron, randomLunchDay)) {
+      ret = randomLunchDay;
+      isNG = false;
+    } else {
+      error++;
+      if (error > 50) {
+        maxGroupInDate++;
+        error = 0;
+      }
+    }
+  }
+  return ret;
+}
+
+/**
  * 既に所属しているグループのランチ日と被っていないか判定する
  * @detail
  *    基本的にはニューロンの予定被り判定に使う
@@ -547,8 +610,10 @@ function isSchedulesDuplicated(member, date) {
  * ランチ可能日を配列にして返す
  * @detail
  *   ランチ可能日: 休日、祝日を除いた日、つまり平日
+ * @param range 月末からのrange営業日だけ取得したい場合に指定 default:0
  */
-function getLunchAvailableDays() {
+function getLunchAvailableDays(range) {
+    range = range || 0;
     var isBusinessDay = function(date) {
     if (date.getDay() == 0 || date.getDay() == 6) {
       return false;
@@ -578,6 +643,13 @@ function getLunchAvailableDays() {
   for (var d = eDate; d > sDate; d.setDate(d.getDate() - 1)) {
     if (isBusinessDay(d)) {
       days.push(new Date(d));
+    }
+  }
+
+  if (range) {
+    var remainingDays = days[0].getDate() - days[days.length - 1].getDate();
+    if (range < remainingDays) {
+      days.splice(range, days.length - range);
     }
   }
 
