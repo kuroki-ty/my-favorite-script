@@ -723,7 +723,9 @@ var CalendarInfo = function(id, info){
  * カレンダー初期化
  */
 function initCalendar() {
-  _calendar = CalendarApp.getCalendarById('exsample@exsample.com');
+  var address = Session.getActiveUser().getEmail();
+  CalendarApp.subscribeToCalendar(address);
+  _calendar = CalendarApp.getCalendarById(address);
 }
 
 /**
