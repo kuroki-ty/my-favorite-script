@@ -14,6 +14,7 @@ var PRE_LUNCH_COL;                       // 前回ランチに行ったグルー
 var GROUP_NUM;                           // ランチグループ数(マスターから取得)
 var IS_FORCE_REGISTRATION;               // ランチの予定を強制的に入れるかどうか(マスターから取得)
 var FORCE_LUNCH_DATE_RANGE;              // 強制予定登録する営業日日数(月末から何営業日か？ マスターから取得)
+var SEARCH_ORDER;                        // 空き予定を月初から探すか月末から探すか(マスターから取得)
 var MIN_REQUIRED_NUM       = 2;          // グループに最低でも必要な要素数 leader+neuron=2
 var OVERLAPPING_NUM        = 2;          // グループ内のチーム重複可能人数(途中で緩和する可能性あり)
 var GROUP_CONFIRM_ROW      = 2;          // グループ最終確認のために出力するシートの行番号
@@ -346,6 +347,7 @@ function initForGrouping() {
                              getValueInSheet(CONFIG_SHEET, 8, 2));
   IS_FORCE_REGISTRATION = getValueInSheet(CONFIG_SHEET, 12, 2);
   FORCE_LUNCH_DATE_RANGE = getValueInSheet(CONFIG_SHEET, 13, 2);
+  SEARCH_ORDER = getValueInSheet(CONFIG_SHEET, 14, 2);
 
   var createTeamList = function() {
     var ret = [];
@@ -650,9 +652,17 @@ function getLunchAvailableDays(range) {
   var eDate;
   eDate = new Date(sDate.getFullYear(), sDate.getMonth() + 1, 0);
 
-  for (var d = eDate; d > sDate; d.setDate(d.getDate() - 1)) {
-    if (isBusinessDay(d)) {
-      days.push(new Date(d));
+  if (SEARCH_ORDER == 'ASC') {
+    for (var d = sDate; d <= eDate; d.setDate(d.getDate() + 1)) {
+      if (isBusinessDay(d)) {
+        days.push(new Date(d));
+      }
+    }
+  } else if (SEARCH_ORDER == 'DESC') {
+    for (var d = eDate; d >= sDate; d.setDate(d.getDate() - 1)) {
+      if (isBusinessDay(d)) {
+        days.push(new Date(d));
+      }
     }
   }
 
