@@ -188,26 +188,33 @@ Person.prototype.setLunchTimeEvents = function(days) {
 
   var validateEvent = function(event) {
     var isNG = false;
-    var time = event.getEndTime().getTime() - event.getStartTime().getTime();
-    if (event.getEndTime().getTime() - event.getStartTime().getTime() < 86400000) {  // 1日分(60 * 60 * 24 * 1000)
+
+    // 1.ランチ時間内に予定が終了する  2.ランチ時間内に予定が開始する  3.ランチ時間内に予定が終わらない
+    var lunchStartTime = new Date(_yyyymmdd_hhmmss(event.getStartTime(), LUNCH_TIME.start));
+    var lunchEndTime   = new Date(_yyyymmdd_hhmmss(event.getStartTime(), LUNCH_TIME.end));
+    if ((lunchStartTime < event.getEndTime()   && event.getEndTime()   < lunchEndTime) ||
+        (lunchStartTime < event.getStartTime() && event.getStartTime() < lunchEndTime) ||
+        (lunchStartTime >= event.getStartTime() && event.getEndTime()  >= lunchEndTime)) {
       isNG = true;
+    } else {
+      isNG = false;
     }
+
+    if (event.getEndTime().getTime() - event.getStartTime().getTime() >= 86400000) {  // 1日分(60 * 60 * 24 * 1000)
+      isNG = false;
+    }
+
     if (self.name.match(okPRegex)) { isNG = false; }
     if (event.getTitle().match(okWRegex)) { isNG = false; }
     if (event.getTitle().match(ngWRegex)) { isNG = true; }
     return isNG;
   };
 
-  days.forEach(function(day) {
-    var start = new Date(_yyyymmdd_hhmmss(day, LUNCH_TIME.start));
-    var end   = new Date(_yyyymmdd_hhmmss(day, LUNCH_TIME.end));
-    var events = self.calendar.getEvents(start, end);
-
-    events.forEach(function(event) {
-      if (validateEvent(event)) {
-        self.lunchTimeEvents[day.getDate()] = event;    // ランチ先約の予定を登録する
-      }
-    });
+  var events = self.calendar.getEvents(days[0], days[days.length - 1]);
+  events.forEach(function(event) {
+    if (validateEvent(event)) {
+      self.lunchTimeEvents[event.getStartTime().getDate()] = event;    // ランチ先約の予定を登録する
+    }
   });
 }
 
