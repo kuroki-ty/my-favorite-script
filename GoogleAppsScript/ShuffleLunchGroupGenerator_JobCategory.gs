@@ -15,7 +15,6 @@ var GROUP_NUM;                           // ランチグループ数(マスタ�
 var IS_FORCE_REGISTRATION;               // ランチの予定を強制的に入れるかどうか(マスターから取得)
 var FORCE_LUNCH_DATE_RANGE;              // 強制予定登録する営業日日数(月末から何営業日か？ マスターから取得)
 var SEARCH_ORDER;                        // 空き予定を月初から探すか月末から探すか(マスターから取得)
-var MIN_REQUIRED_NUM       = 2;          // グループに最低でも必要な要素数 leader+neuron=2
 var OVERLAPPING_NUM        = 2;          // グループ内のチーム重複可能人数(途中で緩和する可能性あり)
 var GROUP_CONFIRM_ROW      = 2;          // グループ最終確認のために出力するシートの行番号
 var PERSONAL_INFO_ROW_OFFS = 2;          // 人に割り当てられているIDと行番号とのオフセット
@@ -109,7 +108,7 @@ LunchGroup.prototype.getMemberAddresses = function() {
  *    PERSONAL_INFO_ROW_OFFS: 人に割り当てられているIDと行番号とのオフセット
  *    PRE_LUNCH_COL: 前回ランチに行ったグループの列番号
  */
-LunchGroup.prototype.setLunchGroupIdInSheet= function() {
+LunchGroup.prototype.setLunchGroupIdInSheet = function() {
   var self = this;
   var setGroupId = function(personId) {
     setValueInSheet(PERSONAL_INFO_MASTER, personId + PERSONAL_INFO_ROW_OFFS, PRE_LUNCH_COL + 2, self.id);
@@ -158,7 +157,6 @@ Person.prototype.isShinsotsu = function() {
 /**
  * ランチタイム時のイベントを取得し、連想配列に格納する
  * @detail
- *    - 1ヶ月の予定を一気に取得するか、日ごとに取得するか迷ったが今は日ごとに取得している
  *    - 予定が入っていても問題ないと判断されるパターンが存在する
  *      - 予定が一日の時間を超えている場合(日で入力されている予定は丸一日予定が抑えられていることになっている)
  *      - okWordsのいずれかがイベント名に入っている場合
@@ -442,7 +440,6 @@ function groupDirectorMembers() {
 
   // 新卒メンバーとその他メンバーで使用する
   var errorCount = 0;
-  var isConditionRelaxation = false;
 
   // 新卒選択
   var shinsotsus = [];
@@ -459,8 +456,8 @@ function groupDirectorMembers() {
      * - 前回のリーダーと同じグループではない(但し、この条件で詰まるようなら緩和する)
      * - グループで一番多いチームメンバーではない(3人以上同じチームがいないこと)
      * - グループの人数がオーバーしていない         **/
-    if ((groupId != _lunchGroup[groupId].members.leader.preLunchGroup || isConditionRelaxation) &&
-        !_lunchGroup[groupId].isMostTeam(shinsotsu.team)                                        &&
+    if ((groupId != _lunchGroup[groupId].members.leader.preLunchGroup) &&
+        !_lunchGroup[groupId].isMostTeam(shinsotsu.team)               &&
         _lunchGroup[groupId].members.shinsotsus.length < MAX_SHINSOTSU_MEMBER) {
        _lunchGroup[groupId].members.shinsotsus.push(shinsotsu);
        _lunchGroup[groupId].updateTeamList(shinsotsu.team);
@@ -470,8 +467,6 @@ function groupDirectorMembers() {
     } else {
       errorCount++;
       if (errorCount == 500) {
-        isConditionRelaxation = true;
-      } else if (errorCount == 1000) {
         MAX_SHINSOTSU_MEMBER++;
         OVERLAPPING_NUM++;
         errorCount = 0;
@@ -491,7 +486,7 @@ function groupDirectorMembers() {
      * - 前回のリーダーと同じグループではない(但し、この条件で詰まるようなら緩和する)
      * - グループで一番多いチームメンバーではない(3人以上同じチームがいないこと)
      * - グループの人数がオーバーしていない         **/
-    if ((groupId != _lunchGroup[groupId].members.leader.preLunchGroup || isConditionRelaxation) &&
+    if (groupId != _lunchGroup[groupId].members.leader.preLunchGroup &&
         !_lunchGroup[groupId].isMostTeam(mem.team) &&
         _lunchGroup[groupId].members.people.length < MAX_MEMBER) {
        _lunchGroup[groupId].members.people.push(mem);
@@ -501,8 +496,6 @@ function groupDirectorMembers() {
     } else {
       errorCount++;
       if (errorCount == 500) {
-        isConditionRelaxation = true;
-      } else if (errorCount == 1000) {
         MAX_MEMBER++;
         OVERLAPPING_NUM++;
         errorCount = 0;
@@ -674,7 +667,7 @@ function getLunchAvailableDays(range) {
   }
 
   if (range) {
-    var remainingDays = days[0].getDate() - days[days.length - 1].getDate();
+    var remainingDays = Math.abs(days[0].getDate() - days[days.length - 1].getDate());
     if (range < remainingDays) {
       days.splice(range, days.length - range);
     }
