@@ -667,7 +667,7 @@ function getLunchAvailableDays(range) {
   }
 
   if (range) {
-    var remainingDays = days[0].getDate() - days[days.length - 1].getDate();
+    var remainingDays = Math.abs(days[0].getDate() - days[days.length - 1].getDate());
     if (range < remainingDays) {
       days.splice(range, days.length - range);
     }
