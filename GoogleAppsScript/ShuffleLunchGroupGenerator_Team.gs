@@ -200,7 +200,12 @@ Person.prototype.setLunchTimeEvents = function(days) {
     return isNG;
   };
 
-  var events = self.calendar.getEvents(days[0], days[days.length - 1]);
+  var events;
+  if (SEARCH_ORDER == 'ASC') {
+    events = self.calendar.getEvents(days[0], days[days.length - 1]);
+  } else if (SEARCH_ORDER == 'DESC') {
+    events = self.calendar.getEvents(days[days.length - 1], days[0]);
+  }
   events.forEach(function(event) {
     if (validateEvent(event)) {
       self.lunchTimeEvents[event.getStartTime().getDate()] = event;    // ランチ先約の予定を登録する
