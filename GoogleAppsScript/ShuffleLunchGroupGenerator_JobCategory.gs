@@ -174,8 +174,6 @@ Person.prototype.setLunchTimeEvents = function(days) {
     return;
   }
 
-  var formatReg = function(str) { return "[" + str + "]"; }
-
   var configDB = _spreadSheet.getSheetByName(CONFIG_SHEET);
   var okPeople = getValuesInSheet(configDB, 11, 2, 1, configDB.getDataRange().getLastColumn() - 1)[0].filter(Boolean);
   var okWords = getValuesInSheet(configDB, 9, 2, 1, configDB.getDataRange().getLastColumn() - 1)[0].filter(Boolean);
@@ -210,8 +208,16 @@ Person.prototype.setLunchTimeEvents = function(days) {
 
   var events;
   if (SEARCH_ORDER == 'ASC') {
+    // 範囲内の予定を全て取得するために、days配列末尾に 最終日00:00:00 を付加する
+    days.push(new Date(days[days.length - 1].getFullYear(),
+                       days[days.length - 1].getMonth(),
+                       days[days.length - 1].getDate() + 1));
     events = self.calendar.getEvents(days[0], days[days.length - 1]);
   } else if (SEARCH_ORDER == 'DESC') {
+    // 範囲内の予定を全て取得するために、days配列先頭に 最終日00:00:00 を付加する
+    days.unshift(new Date(days[0].getFullYear(),
+                          days[0].getMonth(),
+                          days[0].getDate() + 1));
     events = self.calendar.getEvents(days[days.length - 1], days[0]);
   }
   events.forEach(function(event) {
@@ -519,7 +525,7 @@ function searchLunchExecDate(group) {
   var members = group.getMemberArray();
 
   members.forEach(function(member) {
-    member.setLunchTimeEvents(canLunchDays);
+    member.setLunchTimeEvents(canLunchDays.concat());
   });
 
   for (var i = 0; i < canLunchDays.length; i++) {
