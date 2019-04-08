@@ -37,24 +37,24 @@ function toInt(num) {
  * 出力形式(動画リサーチ)
  */
 var ResearchResult = function() {
-  this.videoId;    　　// 動画ID
-  this.title;      　　// 動画タイトル
-  this.viewCount;  　　// 再生回数
-  this.likeCount;      // いいね数
-  this.dislikeCount;   // よくないね数
-  this.commentCount;   // コメント数
+  this.videoId = "";       // 動画ID
+  this.title = "";         // 動画タイトル
+  this.viewCount = 0;      // 再生回数
+  this.likeCount = 0;      // いいね数
+  this.dislikeCount = 0;   // よくないね数
+  this.commentCount = 0;   // コメント数
 }
 
 /**
  * 出力形式(チャンネルリサーチ)
  */
 var ChannelResearchResult = function() {
-  this.channelId;    　　// チャンネルID
-  this.category;         // チャンネルカテゴリ(user or channel)
-  this.title;      　　　// チャンネルタイトル
-  this.viewCount;  　　　// チャンネル再生回数
-  this.commentCount;     // チャンネルコメント数
-  this.subscriberCount;  // チャンネル登録者数
+  this.channelId = "";       // チャンネルID
+  this.category = "";        // チャンネルカテゴリ(user or channel)
+  this.title = "";           // チャンネルタイトル
+  this.viewCount = 0;        // チャンネル再生回数
+  this.commentCount = 0;     // チャンネルコメント数
+  this.subscriberCount = 0;  // チャンネル登録者数
 }
 
 /**
@@ -111,10 +111,12 @@ function research() {
       var data = new ResearchResult();
       data.videoId       = videoIds[i];
       data.title         = items[i].snippet.title;
-      data.viewCount     = toInt(items[i].statistics.viewCount);
-      data.likeCount     = toInt(items[i].statistics.likeCount);
-      data.dislikeCount  = toInt(items[i].statistics.dislikeCount);
-      data.commentCount  = toInt(items[i].statistics.commentCount);
+      if (items[i].statistics) {
+        data.viewCount     = toInt(items[i].statistics.viewCount);
+        data.likeCount     = toInt(items[i].statistics.likeCount);
+        data.dislikeCount  = toInt(items[i].statistics.dislikeCount);
+        data.commentCount  = toInt(items[i].statistics.commentCount);
+      }
 
       output.push(data);
     }
@@ -167,10 +169,12 @@ function researchTrending() {
     var data = new ResearchResult();
     data.videoId       = videoIds[i];
     data.title         = items[i].snippet.title;
-    data.viewCount     = toInt(items[i].statistics.viewCount);
-    data.likeCount     = toInt(items[i].statistics.likeCount);
-    data.dislikeCount  = toInt(items[i].statistics.dislikeCount);
-    data.commentCount  = toInt(items[i].statistics.commentCount);
+    if (items[i].statistics) {
+      data.viewCount     = toInt(items[i].statistics.viewCount);
+      data.likeCount     = toInt(items[i].statistics.likeCount);
+      data.dislikeCount  = toInt(items[i].statistics.dislikeCount);
+      data.commentCount  = toInt(items[i].statistics.commentCount);
+    }
 
     output.push(data);
   }
@@ -248,9 +252,11 @@ function researchChannel() {
       data.channelId       = channel.id;
       data.category        = channel.category;
       data.title           = items[i].snippet.title;
-      data.viewCount       = toInt(items[i].statistics.viewCount);
-      data.commentCount    = toInt(items[i].statistics.commentCount);
-      data.subscriberCount = toInt(items[i].statistics.subscriberCount);
+      if (items[i].statistics) {
+        data.viewCount       = toInt(items[i].statistics.viewCount);
+        data.commentCount    = toInt(items[i].statistics.commentCount);
+        data.subscriberCount = toInt(items[i].statistics.subscriberCount);
+      }
 
       output.push(data);
     }
