@@ -23,17 +23,19 @@ class Event:
 
 def get_schedules():
     creds = None
-    if os.path.exists('token.pickle'):
-        with open('token.pickle', 'rb') as token:
+    dir = os.path.dirname(__file__)
+    pickle_path = os.path.join(dir, 'token.pickle')
+    if os.path.exists(pickle_path):
+        with open(pickle_path, 'rb') as token:
             creds = pickle.load(token)
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
-            flow = InstalledAppFlow.from_client_secrets_file(
-                'credentials.json', SCOPES)
+            cred_path = os.path.join(dir, 'credentials.json')
+            flow = InstalledAppFlow.from_client_secrets_file(cred_path, SCOPES)
             creds = flow.run_local_server()
-        with open('token.pickle', "wb") as token:
+        with open(pickle_path, "wb") as token:
             pickle.dump(creds, token)
 
     service = build('calendar', 'v3', credentials=creds)
