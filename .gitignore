@@ -1,2 +1,7 @@
 # Mac
 .DS_Store
+
+# Google API
+credentials.json
+token.pickle
+
