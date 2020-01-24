@@ -53,10 +53,11 @@ def get_schedules():
                                           singleEvents=True,
                                           orderBy='startTime').execute()
     events = events_result.get('items', [])
-
     schedules = []
     for event in events:
         iso_start = event['start'].get('dateTime')
+        if iso_start is None:
+            continue
         start = parser.parse(iso_start).astimezone(JST).strftime('%H:%M')
         iso_end = event['end'].get('dateTime')
         end = parser.parse(iso_end).astimezone(JST).strftime('%H:%M')
