@@ -9,6 +9,8 @@ from httplib2 import Http
 from googleapiclient.discovery import build
 from oauth2client.service_account import ServiceAccountCredentials
 
+import argparse
+
 JST = datetime.timezone(datetime.timedelta(hours=+9), 'JST')
 
 class Event:
@@ -39,13 +41,14 @@ def authorize_google_service(cred_dir):
     service = build('calendar', 'v3', http=http_auth)
     return service
 
-    today = datetime.date.today()
-    yesterday = datetime.datetime.today() - timedelta(days=1)
-    time_min = datetime.datetime(yesterday.year, yesterday.month,
-                                 yesterday.day, 15, 0, 0).isoformat() + 'Z'
-    time_max = datetime.datetime(today.year, today.month,
-                                 today.day, 14, 59, 59).isoformat() + 'Z'
+def get_schedules(calendarId, start, end):
+    time_min = datetime.datetime(start.year, start.month,
+                                 start.day, 15, 0, 0).isoformat() + 'Z'
+    time_max = datetime.datetime(end.year, end.month,
+                                 end.day, 14, 59, 59).isoformat() + 'Z'
 
+    dir = os.path.dirname(__file__)
+    service = authorize_google_service(dir)
     events_result = service.events().list(calendarId=calendarId,
                                           timeMin=time_min,
                                           timeMax=time_max,
@@ -67,7 +70,18 @@ def authorize_google_service(cred_dir):
     return schedules
 
 def main():
-    schedules = get_schedules()
+    # カレンダー取得範囲のデフォルト
+    today = datetime.datetime.today().strftime('%Y-%m-%d')
+    date_type = lambda s: datetime.datetime.strptime(s, '%Y-%m-%d')
+
+    # コマンドライン引数設定
+    parser = argparse.ArgumentParser(description='Googleカレンダーから予定を取得する')
+    parser.add_argument('-i', '--calendarId', required=True, help='取得したいGoogleカレンダーID')
+    parser.add_argument('-d', '--today', type=date_type, default=today, help='予定の取得日 %Y-%m-%d default:Today')
+
+    args = parser.parse_args()
+    yesterday = args.today - timedelta(days=1)
+    schedules = get_schedules(args.calendarId, yesterday, args.today)
     print('## 【スケジュール】本日の予定')
     for schedule in schedules:
         print(schedule)
