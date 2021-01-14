@@ -77,7 +77,7 @@ def main():
     # コマンドライン引数設定
     parser = argparse.ArgumentParser(description='Googleカレンダーから予定を取得する')
     parser.add_argument('-i', '--calendarId', required=True, help='取得したいGoogleカレンダーID')
-    parser.add_argument('-d', '--today', type=date_type, default=today, help='予定の取得日 %Y-%m-%d default:Today')
+    parser.add_argument('-d', '--today', type=date_type, default=today, help='予定の取得日 yyyy-mm-dd default:Today')
 
     args = parser.parse_args()
     yesterday = args.today - timedelta(days=1)
