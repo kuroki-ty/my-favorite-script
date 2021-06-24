@@ -5,3 +5,8 @@
 credentials.json
 token.pickle
 
+# dotfiles
+.env
+
+# Python
+__pycache__/
