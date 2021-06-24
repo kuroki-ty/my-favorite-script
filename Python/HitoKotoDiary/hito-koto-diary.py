@@ -1,5 +1,5 @@
 from google import spreadsheets as spsh
-import config
+from config import config
 
 import os.path
 import argparse
