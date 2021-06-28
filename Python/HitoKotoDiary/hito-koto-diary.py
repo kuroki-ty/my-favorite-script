@@ -33,7 +33,7 @@ def write_diary(date, text, column, force):
         updated_range = spreadsheet.write_value(text, year, COLUMN_LIST.get(column).get('alpha'), target_index + 1)
         response += f'...... {updated_range}  に正常に書き込まれました'
     else:
-        response += '...... 書き込みに失敗しました'
+        response += '...... 書き込みに失敗しました\n書き込み対象のセルにはすでに値が入力されています'
     return response
 
 def read_diary(date):
